@@ -15,7 +15,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.api.schemas.response import ErrorResponse, FullAnalysisResponse
+from app.api.schemas.response import ErrorResponse, FullAnalysisContentResponse, FullAnalysisResponse
 from app.application.services.full_pipeline_service import FullPipelineService
 from app.application.services.project_analysis_service import ProjectAnalysisService
 from app.domain.exceptions import UnsupportedFileTypeError
@@ -98,6 +98,76 @@ async def analyze_project(
         background=None,
     )
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 端點 3：內容直傳 — ZIP → Markdown → AI 生成內容 JSON
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/analyze-and-generate/content",
+    status_code=status.HTTP_200_OK,
+    summary="整合管線：分析 ZIP 並直接回傳 AI 生成內容 JSON",
+    description=(
+        "上傳 `.zip`，執行與 `/analyze-and-generate` 完全相同的兩個 Phase 管線。\n\n"
+        "**差異在於回傳格式**：\n\n"
+        "- `/analyze-and-generate`：將兩份文件寫入伺服器磁碟，回傳此 `路徑`。\n"
+        "- `/analyze-and-generate/content`：**不依賴磁碟路徑**，直接回傳 AI 生成的 Markdown 文字內容。\n\n"
+        "適用情境：前端需要直接渲染內容，或進行內容對接 / 二次處理，不需要對接伺服器檔案系統。\n\n"
+        "**前置需求**：伺服器需設定 `GOOGLE_API_KEY` 環境變數。"
+    ),
+    response_model=FullAnalysisContentResponse,
+    responses={
+        200: {"description": "成功回傳 AI 生成的兩份文件完整內容。"},
+        415: {"model": ErrorResponse, "description": "上傳檔案非 .zip 格式。"},
+        413: {"model": ErrorResponse, "description": "超過 50 MB 上限。"},
+        422: {"model": ErrorResponse, "description": "非有效 ZIP 或過濾後無程式碼檔案。"},
+        502: {"model": ErrorResponse, "description": "AI 語言模型 API 呼叫失敗。"},
+        500: {"model": ErrorResponse, "description": "非預期的內部錯誤。"},
+    },
+)
+async def analyze_and_generate_content(
+    file: UploadFile = File(..., description="待分析的 ZIP 壓縮檔。"),
+) -> FullAnalysisContentResponse:
+    """執行完整 Phase 1 + Phase 2 整合管線，不寫入磁碟，直接回傳 AI 生成內容 JSON。
+
+    Args:
+        file: FastAPI 解析的 multipart 上傳 ZIP 檔案物件。
+
+    Returns:
+        :class:`~app.api.schemas.response.FullAnalysisContentResponse`，
+        包含 ``api_docs_content`` 與 ``env_guide_content`` 完整 Markdown 內容字串。
+
+    Raises:
+        UnsupportedFileTypeError: 非 .zip 格式 (→ 415)。
+        FileSizeLimitExceededError: 超過 50 MB (→ 413)。
+        InvalidZipFileError: 非有效 ZIP (→ 422)。
+        EmptyProjectError: 過濾後無程式碼檔案 (→ 422)。
+        LLMCallError: Gemini API 呼叫失敗 (→ 502)。
+    """
+    filename: str = file.filename or "upload.zip"
+    if not filename.lower().endswith(".zip"):
+        raise UnsupportedFileTypeError(filename=filename)
+
+    logger.info("[analyze-and-generate/content] 收到 '%s'", filename)
+
+    zip_bytes: bytes = await file.read()
+
+    # output_dir 使用系統快取目錄；本端點的核心價值在於回傳 content 本身，
+    # 磁碟輸出為 FullPipelineService 的副產物，後續可視需求拆除。
+    report = await _full_service.analyze_and_generate(
+        zip_bytes=zip_bytes,
+        filename=filename,
+        output_dir=Path.home() / ".cache" / "project-handover" / "ai_docs",
+    )
+
+    return FullAnalysisContentResponse(
+        project_name=report.project_name,
+        api_docs_content=report.api_docs.content,
+        env_guide_content=report.env_guide.content,
+        api_docs_word_count=report.api_docs.word_count,
+        env_guide_word_count=report.env_guide.word_count,
+        generated_at=report.generated_at,
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 端點 2：整合 — ZIP → Markdown → AI 生成兩份技術文件

@@ -193,3 +193,66 @@ class SessionExpiredError(AppBaseException):
             status_code=410,
             detail=detail,
         )
+
+
+# ---------------------------------------------------------------------------
+# GitHub 來源相關例外 (GitHub source exceptions)
+# ---------------------------------------------------------------------------
+
+
+class InvalidGitHubUrlError(AppBaseException):
+    """當使用者提供的 URL 格式不符合有效 GitHub repo 規範時拋出。
+
+    有效格式範例：``https://github.com/owner/repo``
+    """
+
+    def __init__(self, detail: Optional[str] = None) -> None:
+        """初始化 InvalidGitHubUrlError。
+
+        Args:
+            detail: 選擇性的額外上下文，例如使用者提供的原始 URL。
+        """
+        super().__init__(
+            error_code="INVALID_GITHUB_URL",
+            message="提供的 URL 不是有效的 GitHub repo 網址，請確認格式（例如：https://github.com/owner/repo）。",
+            status_code=422,
+            detail=detail,
+        )
+
+
+class GitHubRepoNotFoundError(AppBaseException):
+    """當目標 GitHub repo 不存在或為私有 repo 時拋出。
+
+    本系統目前僅支援公開 repo，私有 repo 支援列為 V2 規劃。
+    系統依序嘗試 ``main`` 與 ``master`` 兩個預設分支，兩者皆 404 才拋出此例外。
+    """
+
+    def __init__(self, detail: Optional[str] = None) -> None:
+        """初始化 GitHubRepoNotFoundError。
+
+        Args:
+            detail: 選擇性的額外上下文，例如嘗試的 owner/repo 字串。
+        """
+        super().__init__(
+            error_code="GITHUB_REPO_NOT_FOUND",
+            message="找不到指定的 GitHub repo，請確認網址正確且 repo 為公開狀態（目前不支援私有 repo）。",
+            status_code=404,
+            detail=detail,
+        )
+
+
+class GitHubDownloadError(AppBaseException):
+    """當從 GitHub 下載 ZIP 壓縮檔過程中發生網路錯誤或連線逾時時拋出。"""
+
+    def __init__(self, detail: Optional[str] = None) -> None:
+        """初始化 GitHubDownloadError。
+
+        Args:
+            detail: 選擇性的底層網路錯誤訊息（例如：``httpx.TimeoutException`` 的原始資訊）。
+        """
+        super().__init__(
+            error_code="GITHUB_DOWNLOAD_ERROR",
+            message="從 GitHub 下載專案時發生錯誤，請確認網路連線或稍後再試。",
+            status_code=502,
+            detail=detail,
+        )
