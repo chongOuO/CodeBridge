@@ -103,7 +103,7 @@ async def generate_api_docs(
 
     return ApiDocsContentResponse(
         project_name=filename.removesuffix(".zip"),
-        api_docs_content=section.content,
+        content=section.content,
         word_count=section.word_count,
         generated_at=datetime.now(tz=timezone.utc),
     )
@@ -173,7 +173,7 @@ async def generate_env_guide(
 
     return EnvGuideContentResponse(
         project_name=filename.removesuffix(".zip"),
-        env_guide_content=section.content,
+        content=section.content,
         word_count=section.word_count,
         generated_at=datetime.now(tz=timezone.utc),
     )

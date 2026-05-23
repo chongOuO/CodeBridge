@@ -150,7 +150,7 @@ class ApiDocsContentResponse(BaseModel):
     """
 
     project_name: str = Field(..., examples=["my_project"])
-    api_docs_content: str = Field(
+    content: str = Field(
         ...,
         description="AI 生成的 API 使用文件完整 Markdown 文字內容。",
     )
@@ -178,7 +178,7 @@ class EnvGuideContentResponse(BaseModel):
     """
 
     project_name: str = Field(..., examples=["my_project"])
-    env_guide_content: str = Field(
+    content: str = Field(
         ...,
         description="AI 生成的環境建置指南完整 Markdown 文字內容。",
     )
