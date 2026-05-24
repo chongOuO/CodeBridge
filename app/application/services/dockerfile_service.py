@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from app.api.schemas.dockerfile_schema import DockerfileResponse
+from app.api.schemas.response import GeneratedArtifact
 from app.application.graphs.dockerfile_graph import build_dockerfile_graph
 from app.application.services.project_analysis_service import ProjectAnalysisService
 
@@ -74,6 +75,28 @@ class DockerfileService:
 
         # 4. 組裝 Response
         logger.info("[DockerfileService] 管線完成，準備組裝 DockerfileResponse。")
+
+        artifacts = [
+            GeneratedArtifact(
+                filename="Dockerfile",
+                file_type="dockerfile",
+                content=final_state.get("dockerfile_content", ""),
+            ),
+            GeneratedArtifact(
+                filename="docker-compose.yml",
+                file_type="yaml",
+                content=final_state.get("compose_content", ""),
+            )
+        ]
+        if dockerignore := final_state.get("dockerignore_content"):
+            artifacts.append(
+                GeneratedArtifact(
+                    filename=".dockerignore",
+                    file_type="dockerignore",
+                    content=dockerignore,
+                )
+            )
+
         return DockerfileResponse(
             project_name=project_name,
             language=final_state.get("detected_language", "unknown"),
@@ -81,7 +104,5 @@ class DockerfileService:
             base_image=final_state.get("base_image", "debian:bookworm-slim"),
             has_database=final_state.get("has_database", False),
             detected_db_type=final_state.get("detected_db_type"),
-            dockerfile_content=final_state.get("dockerfile_content", ""),
-            dockerignore_content=final_state.get("dockerignore_content"),
-            compose_content=final_state.get("compose_content", ""),
+            artifacts=artifacts,
         )

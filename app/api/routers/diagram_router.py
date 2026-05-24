@@ -37,23 +37,22 @@ def _render_mermaid_markdown(result: DiagramResponse) -> str:
         "",
         "---",
         "",
-        "## 系統架構圖",
-        "",
-        "```mermaid",
-        result.architecture_diagram,
-        "```",
     ]
-    if result.er_diagram:
+    
+    for artifact in result.artifacts:
+        # 根據檔名決定標題
+        title = "系統架構圖" if "architecture" in artifact.filename else "資料庫 ER 圖"
         lines += [
+            f"## {title}",
+            "",
+            "```mermaid",
+            artifact.content,
+            "```",
             "",
             "---",
             "",
-            "## 資料庫 ER 圖",
-            "",
-            "```mermaid",
-            result.er_diagram,
-            "```",
         ]
+        
     return "\n".join(lines)
 
 

@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from app.api.schemas.diagram_schema import DiagramResponse
+from app.api.schemas.response import GeneratedArtifact
 from app.application.graphs.diagram_graph import build_diagram_graph
 from app.application.services.project_analysis_service import ProjectAnalysisService
 
@@ -72,9 +73,25 @@ class DiagramService:
 
         # 3. 回覆模型組裝
         logger.info("[DiagramService] 生成完成，準備組裝 Response。")
+
+        artifacts = [
+            GeneratedArtifact(
+                filename="architecture.mermaid",
+                file_type="mermaid",
+                content=final_state.get("architecture_diagram", ""),
+            )
+        ]
+        if er := final_state.get("er_diagram"):
+            artifacts.append(
+                GeneratedArtifact(
+                    filename="er_diagram.mermaid",
+                    file_type="mermaid",
+                    content=er,
+                )
+            )
+
         return DiagramResponse(
             project_name=project_name,
             has_database=final_state.get("has_database", False),
-            architecture_diagram=final_state.get("architecture_diagram", ""),
-            er_diagram=final_state.get("er_diagram"),
+            artifacts=artifacts,
         )

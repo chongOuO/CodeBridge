@@ -122,14 +122,12 @@ async def generate_and_download(
 
     download_filename = f"{result.project_name}_docker.zip"
 
-    # 將三個生成檔案打包成 ZIP
+    # 將產出檔案打包成 ZIP
     tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
     try:
         with zipfile.ZipFile(tmp, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("Dockerfile", result.dockerfile_content)
-            if result.dockerignore_content:
-                zf.writestr(".dockerignore", result.dockerignore_content)
-            zf.writestr("docker-compose.yml", result.compose_content)
+            for artifact in result.artifacts:
+                zf.writestr(artifact.filename, artifact.content)
         tmp_path = tmp.name
     finally:
         tmp.close()

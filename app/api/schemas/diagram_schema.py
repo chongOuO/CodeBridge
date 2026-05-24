@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.api.schemas.response import GeneratedArtifact
 
 
 class DiagramResponse(BaseModel):
@@ -24,8 +26,13 @@ class DiagramResponse(BaseModel):
             "example": {
                 "project_name": "my_awesome_project",
                 "has_database": True,
-                "architecture_diagram": "graph TD\n  A[FastAPI] --> B[Service]\n",
-                "er_diagram": "erDiagram\n  USER ||--o{ POST : writes\n",
+                "artifacts": [
+                    {
+                        "filename": "architecture.mermaid",
+                        "file_type": "mermaid",
+                        "content": "graph TD\n  A[FastAPI] --> B[Service]\n"
+                    }
+                ],
                 "generated_at": "2026-04-07T12:00:00.000Z"
             }
         }
@@ -41,13 +48,9 @@ class DiagramResponse(BaseModel):
         description="此專案是否偵測到資料庫相關程式碼（影響是否生成 ER 圖）。",
         example=True,
     )
-    architecture_diagram: str = Field(
+    artifacts: List[GeneratedArtifact] = Field(
         ...,
-        description="系統架構圖的 Mermaid.js (graph TD) 語法字串。前端可直接渲染。",
-    )
-    er_diagram: Optional[str] = Field(
-        default=None,
-        description="資料庫的關聯 ER 圖 (erDiagram) 語法字串。若未偵測到資料庫則為 null。",
+        description="圖表生成的所有產出物。",
     )
     generated_at: datetime = Field(
         default_factory=datetime.now,

@@ -237,23 +237,28 @@ class AiDocsResult(BaseModel):
     model_config = {"json_schema_extra": {"title": "AiDocsResult"}}
 
 
+class GeneratedArtifact(BaseModel):
+    """通用的生成產出物模型，用於陣列化多文件輸出。"""
+    filename: str = Field(..., description="檔案名稱，例如 Dockerfile、architecture.mermaid。")
+    file_type: str = Field(..., description="檔案類型，例如 dockerfile、yaml、mermaid。")
+    content: str = Field(..., description="檔案內容。")
+
+    model_config = {"json_schema_extra": {"title": "GeneratedArtifact"}}
+
+
 class DiagramResult(BaseModel):
     """Mermaid 圖表管線的輸出結果。
 
-    對應 ``DiagramService`` 的生成結果，包含可直接渲染的 Mermaid.js 語法字串。
+    對應 ``DiagramService`` 的生成結果，包含裝載圖表內容的陣列。
     """
 
     has_database: bool = Field(
         ...,
         description="是否在專案中偵測到資料庫相關程式碼。",
     )
-    architecture_diagram: str = Field(
+    artifacts: List[GeneratedArtifact] = Field(
         ...,
-        description="系統架構圖的 Mermaid.js (graph TD) 語法字串。",
-    )
-    er_diagram: Optional[str] = Field(
-        default=None,
-        description="資料庫 ER 圖的 Mermaid.js (erDiagram) 語法字串；未偵測到資料庫則為 null。",
+        description="圖表生成的所有產出物。",
     )
 
     model_config = {"json_schema_extra": {"title": "DiagramResult"}}
@@ -262,7 +267,7 @@ class DiagramResult(BaseModel):
 class DockerfileResult(BaseModel):
     """Docker 設定管線的輸出結果。
 
-    對應 ``DockerfileService`` 的生成結果，包含三個 Docker 設定檔的完整文字內容。
+    對應 ``DockerfileService`` 的生成結果，包含裝載設定檔內容的陣列。
     """
 
     language: str = Field(..., description="偵測到的主要程式語言，例如 python、node。")
@@ -270,12 +275,10 @@ class DockerfileResult(BaseModel):
         default=None,
         description="偵測到的框架，例如 fastapi、express；未偵測到則為 null。",
     )
-    dockerfile_content: str = Field(..., description="生成的完整 Dockerfile 文字。")
-    dockerignore_content: Optional[str] = Field(
-        default=None,
-        description="生成的 .dockerignore 文字；無則為 null。",
+    artifacts: List[GeneratedArtifact] = Field(
+        ...,
+        description="Docker 設定檔的所有產出物。",
     )
-    compose_content: str = Field(..., description="生成的 docker-compose.yml 文字。")
 
     model_config = {"json_schema_extra": {"title": "DockerfileResult"}}
 

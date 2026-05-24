@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+from app.api.schemas.response import GeneratedArtifact
 
 
 class DockerfileResponse(BaseModel):
@@ -21,9 +23,9 @@ class DockerfileResponse(BaseModel):
         base_image: LLM 選用的 Docker base image（例如 python:3.11-slim）。
         has_database: 是否偵測到資料庫相關依賴。
         detected_db_type: 資料庫類型（postgresql / mysql / redis / mongodb）；無則為 None。
-        dockerfile_content: 生成的完整 Dockerfile 文字內容。
-        dockerignore_content: 生成的 .dockerignore 文字內容；無則為 None。
-        compose_content: 生成的 docker-compose.yml 文字內容。
+        has_database: 是否偵測到資料庫相關依賴。
+        detected_db_type: 資料庫類型（postgresql / mysql / redis / mongodb）；無則為 None。
+        artifacts: 生成的設定檔陣列。
         generated_at: 生成時間戳（UTC）。
     """
 
@@ -35,11 +37,9 @@ class DockerfileResponse(BaseModel):
     detected_db_type: Optional[str] = Field(
         None, description="資料庫類型，例如 postgresql、mysql、redis。"
     )
-    dockerfile_content: str = Field(..., description="生成的完整 Dockerfile 文字。")
-    dockerignore_content: Optional[str] = Field(
-        None, description="生成的 .dockerignore 文字。"
+    artifacts: List[GeneratedArtifact] = Field(
+        ..., description="Docker 設定檔的所有產出物。"
     )
-    compose_content: str = Field(..., description="生成的 docker-compose.yml 文字。")
     generated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="生成時間戳（UTC）。",

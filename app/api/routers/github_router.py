@@ -266,8 +266,7 @@ async def analyze_all_from_github(
         d = result.diagram_response
         diagram_result = DiagramResult(
             has_database=d.has_database,
-            architecture_diagram=d.architecture_diagram,
-            er_diagram=d.er_diagram,
+            artifacts=d.artifacts,
         )
 
     # ── 組裝 Docker 子結果 ────────────────────────────────────────────────────
@@ -277,9 +276,7 @@ async def analyze_all_from_github(
         dockerfile_result = DockerfileResult(
             language=df.language,
             framework=df.framework,
-            dockerfile_content=df.dockerfile_content,
-            dockerignore_content=df.dockerignore_content,
-            compose_content=df.compose_content,
+            artifacts=df.artifacts,
         )
 
     return GitHubSelectiveResponse(
