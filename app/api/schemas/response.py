@@ -56,37 +56,26 @@ class AnalyzeResponse(BaseModel):
 
 
 class FullAnalysisResponse(BaseModel):
-    """``POST /api/v1/projects/analyze-and-generate`` 的成功回應模型。
+    """``POST /api/v1/github/analyze`` 的成功回應模型。
 
-    整合 Phase 1 + Phase 2 的完整管線結果，實際由 :class:`FullPipelineService`
-    計算後填入。
+    整合 Phase 1 + Phase 2 的完整管線結果，以 artifacts 陣列直接回傳
+    AI 生成的文件內容，不寫入磁碟、不回傳路徑。
 
     Attributes:
-        project_name: 由 ZIP 檔名推斷的專案名稱。
+        project_name: 由 ZIP 檔名或 GitHub repo 名稱推斷的專案名稱。
         code_file_count: Phase 1 過濾後納入分析的程式碼檔案數量。
         total_files_in_zip: ZIP 內的總檔案數量。
-        api_docs_path: AI 生成的 API 使用文件輸出路徑。
-        env_guide_path: AI 生成的環境建置指南輸出路徑。
-        api_docs_word_count: API 文件的粗略字數估算。
-        env_guide_word_count: 環境指南的粗略字數估算。
+        artifacts: AI 生成的所有文件產出物陣列（API 使用文件 + 環境建置指南）。
         generated_at: 整個管線完成的 UTC 時間戳。
     """
 
     project_name: str = Field(..., examples=["my_project"])
     code_file_count: int = Field(..., ge=0, examples=[12])
     total_files_in_zip: int = Field(..., ge=0, examples=[40])
-    api_docs_path: str = Field(
+    artifacts: List[GeneratedArtifact] = Field(
         ...,
-        description="AI 生成的 API 使用文件輸出路徑（伺服器本地）。",
-        examples=["/tmp/output/my_project_api_docs.md"],
+        description="AI 生成的所有文件產出物，包含 API 使用文件與環境建置指南。",
     )
-    env_guide_path: str = Field(
-        ...,
-        description="AI 生成的環境建置指南輸出路徑（伺服器本地）。",
-        examples=["/tmp/output/my_project_env_guide.md"],
-    )
-    api_docs_word_count: int = Field(default=0, ge=0, description="API 文件字數估算。")
-    env_guide_word_count: int = Field(default=0, ge=0, description="環境指南字數估算。")
     generated_at: datetime = Field(
         ...,
         description="整個管線完成的 UTC 時間戳。",
@@ -209,32 +198,44 @@ class GenerationType(str, Enum):
         DOCKERFILE: 觸發 Docker 設定管線，生成 Dockerfile、.dockerignore 與 docker-compose.yml。
     """
 
-    AI_DOCS = "ai_docs"
+    API_DOCS = "api_docs"
+    ENV_GUIDE = "env_guide"
     DIAGRAM = "diagram"
     DOCKERFILE = "dockerfile"
 
 
-class AiDocsResult(BaseModel):
-    """AI 技術文件管線的輸出結果。
+class ApiDocsResult(BaseModel):
+    """API 文件管線的輸出結果。
 
-    對應 ``FullPipelineService`` 的生成結果，
-    輸出至伺服器磁碟的兩份 Markdown 文件路徑。
+    直接回傳 AI 生成的文件內容，不依賴伺服器磁碟路徑。
+
+    Attributes:
+        artifacts: AI 生成的 API 使用文件產出物。
     """
 
-    api_docs_path: str = Field(
+    artifacts: List[GeneratedArtifact] = Field(
         ...,
-        description="AI 生成的 API 使用文件輸出路徑（伺服器本地）。",
-        examples=["/Users/user/Desktop/ai_docs/fastapi_api_docs.md"],
+        description="AI 生成的 API 使用文件。",
     )
-    env_guide_path: str = Field(
-        ...,
-        description="AI 生成的環境建置指南輸出路徑（伺服器本地）。",
-        examples=["/Users/user/Desktop/ai_docs/fastapi_env_guide.md"],
-    )
-    api_docs_word_count: int = Field(default=0, ge=0, description="API 文件字數估算。")
-    env_guide_word_count: int = Field(default=0, ge=0, description="環境指南字數估算。")
 
-    model_config = {"json_schema_extra": {"title": "AiDocsResult"}}
+    model_config = {"json_schema_extra": {"title": "ApiDocsResult"}}
+
+
+class EnvGuideResult(BaseModel):
+    """環境建置指南管線的輸出結果。
+
+    直接回傳 AI 生成的文件內容，不依賴伺服器磁碟路徑。
+
+    Attributes:
+        artifacts: AI 生成的環境建置指南產出物。
+    """
+
+    artifacts: List[GeneratedArtifact] = Field(
+        ...,
+        description="AI 生成的環境建置指南。",
+    )
+
+    model_config = {"json_schema_extra": {"title": "EnvGuideResult"}}
 
 
 class GeneratedArtifact(BaseModel):
@@ -310,9 +311,13 @@ class GitHubSelectiveResponse(BaseModel):
         description="實際執行的生成管線清單。",
         examples=[["ai_docs", "diagram"]],
     )
-    ai_docs: Optional[AiDocsResult] = Field(
+    api_docs: Optional[ApiDocsResult] = Field(
         default=None,
-        description="AI 技術文件管線結果；未選擇時為 null。",
+        description="API 使用文件管線結果；未選擇時為 null。",
+    )
+    env_guide: Optional[EnvGuideResult] = Field(
+        default=None,
+        description="環境建置指南管線結果；未選擇時為 null。",
     )
     diagram: Optional[DiagramResult] = Field(
         default=None,

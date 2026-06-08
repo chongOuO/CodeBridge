@@ -28,8 +28,9 @@ from typing import List, Optional
 from app.api.schemas.response import GenerationType
 from app.application.services.diagram_service import DiagramService
 from app.application.services.dockerfile_service import DockerfileService
-from app.application.services.full_pipeline_service import FullPipelineService
-from app.domain.entities.ai_report import AIReport
+from app.application.services.api_docs_service import ApiDocsService
+from app.application.services.env_guide_service import EnvGuideService
+from app.domain.entities.ai_report import AnalysisSection
 from app.api.schemas.diagram_schema import DiagramResponse
 from app.api.schemas.dockerfile_schema import DockerfileResponse
 from app.infrastructure.adapters.github_downloader import GitHubDownloader
@@ -53,7 +54,9 @@ class GitHubSelectiveResult:
         project_name: 由 GitHub repo 名稱推斷的專案名稱。
         github_url: 使用者提供的原始 GitHub repo URL。
         generated_types: 實際執行的生成管線清單。
-        ai_docs_report: AI 技術文件管線結果；未選擇時為 None。
+        ai_docs_report: AI 技術文件管線結果；未選擇時為 None。（已廢棄）
+        api_docs_section: API 使用文件管線結果；未選擇時為 None。
+        env_guide_section: 環境建置指南管線結果；未選擇時為 None。
         diagram_response: Mermaid 圖表管線結果；未選擇時為 None。
         dockerfile_response: Docker 設定管線結果；未選擇時為 None。
         generated_at: 整個 gather 完成後的 UTC 時間戳。
@@ -62,7 +65,8 @@ class GitHubSelectiveResult:
     project_name: str
     github_url: str
     generated_types: List[GenerationType]
-    ai_docs_report: Optional[AIReport] = field(default=None)
+    api_docs_section: Optional[AnalysisSection] = field(default=None)
+    env_guide_section: Optional[AnalysisSection] = field(default=None)
     diagram_response: Optional[DiagramResponse] = field(default=None)
     dockerfile_response: Optional[DockerfileResponse] = field(default=None)
     generated_at: datetime = field(
@@ -101,7 +105,8 @@ class GitHubSelectiveService:
         避免每次請求重建管線物件的開銷。
         """
         self._downloader = GitHubDownloader()
-        self._full_pipeline = FullPipelineService()
+        self._api_docs = ApiDocsService()
+        self._env_guide = EnvGuideService()
         self._diagram = DiagramService()
         self._dockerfile = DockerfileService()
         logger.info("GitHubSelectiveService 初始化完成。")
@@ -153,10 +158,20 @@ class GitHubSelectiveService:
         task_keys: List[str] = []
         tasks = []
 
-        if GenerationType.AI_DOCS in generate:
-            task_keys.append("ai_docs")
+        if GenerationType.API_DOCS in generate:
+            task_keys.append("api_docs")
             tasks.append(
-                self._full_pipeline.analyze_and_generate(
+                self._api_docs.generate(
+                    zip_bytes=zip_bytes,
+                    filename=filename,
+                    output_dir=output_dir,
+                )
+            )
+
+        if GenerationType.ENV_GUIDE in generate:
+            task_keys.append("env_guide")
+            tasks.append(
+                self._env_guide.generate(
                     zip_bytes=zip_bytes,
                     filename=filename,
                     output_dir=output_dir,
@@ -192,7 +207,8 @@ class GitHubSelectiveService:
             project_name=project_name,
             github_url=github_url,
             generated_types=generate,
-            ai_docs_report=result_map.get("ai_docs"),
+            api_docs_section=result_map.get("api_docs"),
+            env_guide_section=result_map.get("env_guide"),
             diagram_response=result_map.get("diagram"),
             dockerfile_response=result_map.get("dockerfile"),
         )
