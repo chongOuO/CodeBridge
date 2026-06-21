@@ -17,6 +17,7 @@ from dataclasses import asdict
 from app.application.graphs.qa_graph import build_qa_graph
 from app.domain.entities.qa_models import QAResult, QuestionType, SessionInfo
 from app.domain.exceptions import SessionExpiredError, SessionNotFoundError
+from app.infrastructure.adapters.github_downloader import GitHubDownloader
 from app.infrastructure.adapters.map_reduce_summarizer import (
     MAP_REDUCE_THRESHOLD,
     MapReduceSummarizer,
@@ -52,6 +53,7 @@ class QAService:
         self._store = session_store
         self._analysis_service = ProjectAnalysisService()
         self._summarizer = MapReduceSummarizer()
+        self._github_downloader = GitHubDownloader()
 
     async def create_session(self, zip_bytes: bytes, filename: str) -> SessionData:
         """上傳 ZIP，執行 Phase 1 解析，並建立 Q&A Session。
@@ -134,6 +136,42 @@ class QAService:
 
         logger.info("[QAService] Session %s 已建立。", session.session_id)
         return session
+
+    async def create_session_from_github(self, github_url: str) -> SessionData:
+        """從 GitHub repo URL 下載並建立 Q&A Session。
+
+        此方法為輸入源轉換層，唯一職責是將 GitHub URL 轉換為
+        ``(zip_bytes, filename)``，再委派給 :meth:`create_session` 執行
+        所有解析與 Map-Reduce 邏輯，確保零重複程式碼。
+
+        **流程**：
+        1. ``GitHubDownloader.fetch()`` 下載 repo ZIP（支援 main/master fallback）。
+        2. 委派 :meth:`create_session` 執行 Phase 1 + Map-Reduce + Session 存入。
+
+        Args:
+            github_url: GitHub repo 公開網址（例如 ``"https://github.com/owner/repo"``）。
+
+        Returns:
+            已建立的 :class:`~SessionData` 實例。
+
+        Raises:
+            InvalidGitHubUrlError: URL 格式不符 GitHub repo 規範（422）。
+            GitHubRepoNotFoundError: Repo 不存在或為私有（404）。
+            FileSizeLimitExceededError: 下載的 ZIP 超過 50 MB（413）。
+            GitHubDownloadError: 下載逾時或網路錯誤（502）。
+            InvalidZipFileError: GitHub 回傳的 ZIP 無法解析（422）。
+            EmptyProjectError: 過濾後無程式碼檔案（422）。
+        """
+        logger.info("[QAService] 從 GitHub 建立 Session，URL：%s", github_url)
+
+        zip_bytes, filename = await self._github_downloader.fetch(github_url)
+        logger.info(
+            "[QAService] GitHub 下載完成：%s（%d bytes），移交 create_session。",
+            filename,
+            len(zip_bytes),
+        )
+
+        return await self.create_session(zip_bytes=zip_bytes, filename=filename)
 
     async def ask(self, session_id: str, question: str) -> QAResult:
         """對已建立的 Session 提問。

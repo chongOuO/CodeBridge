@@ -16,6 +16,23 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 
+class GitHubSessionRequest(BaseModel):
+    """POST /qa/sessions/from-github 的請求體。
+
+    Attributes:
+        github_url: 公開 GitHub repo 的完整網址。
+            接受格式範例：
+            - ``https://github.com/owner/repo``
+            - ``https://github.com/owner/repo.git``
+    """
+
+    github_url: str = Field(
+        ...,
+        description="GitHub repo 公開網址（目前僅支援公開 repo）。",
+        examples=["https://github.com/tiangolo/fastapi"],
+    )
+
+
 class AskRequest(BaseModel):
     """POST /qa/sessions/{session_id}/ask 的請求體。
 

@@ -34,7 +34,7 @@ DB_KEYWORDS = [
 ]
 
 
-async def detect_db_node(state: DiagramGraphState, config: Any) -> dict[str, Any]:
+async def detect_db_node(state: DiagramGraphState, config: Any = None) -> dict[str, Any]:
     """分析原始內容，判斷專案是否包含資料庫。
 
     將結果回寫至 ``has_database`` 屬性中。

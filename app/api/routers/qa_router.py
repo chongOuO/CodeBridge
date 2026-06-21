@@ -18,11 +18,15 @@ from app.api.schemas.qa_schemas import (
     AskRequest,
     AskResponse,
     DeleteSessionResponse,
+    GitHubSessionRequest,
     SessionCreatedResponse,
 )
 from app.application.services.qa_service import QAService
 from app.domain.exceptions import (
     FileSizeLimitExceededError,
+    GitHubDownloadError,
+    GitHubRepoNotFoundError,
+    InvalidGitHubUrlError,
     InvalidZipFileError,
     EmptyProjectError,
     SessionExpiredError,
@@ -117,6 +121,50 @@ async def create_session(
         expires_at=session.expires_at.isoformat(),
         has_map_reduce_summary=session.map_reduce_summary is not None,
         message="Session 建立成功，可開始提問。",
+    )
+
+
+@router.post(
+    "/sessions/from-github",
+    response_model=SessionCreatedResponse,
+    summary="以 GitHub 連結建立 Q&A Session",
+    description=(
+        "輸入公開 GitHub repo 網址，系統將自動下載 repo ZIP、解壓、過濾程式碼并建立 Q&A Session。"
+        "大型專案（> 60K Token）會額外執行 Map-Reduce 精練摘要。"
+        "建立成功後回傳 session_id，後續可憑此 ID 多次提問（Session 有效期 30 分鐘）。"
+        "目前僅支援公開 repo。"
+    ),
+)
+async def create_session_from_github(
+    body: GitHubSessionRequest,
+    service: QAService = Depends(get_qa_service),
+) -> SessionCreatedResponse:
+    """以 GitHub URL 建立 Q&A Session。"""
+    try:
+        session = await service.create_session_from_github(github_url=body.github_url)
+    except InvalidGitHubUrlError as exc:
+        raise HTTPException(status_code=422, detail=exc.message) from exc
+    except GitHubRepoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=exc.message) from exc
+    except GitHubDownloadError as exc:
+        raise HTTPException(status_code=502, detail=exc.message) from exc
+    except FileSizeLimitExceededError as exc:
+        raise HTTPException(status_code=413, detail=exc.message) from exc
+    except InvalidZipFileError as exc:
+        raise HTTPException(status_code=422, detail=exc.message) from exc
+    except EmptyProjectError as exc:
+        raise HTTPException(status_code=422, detail=exc.message) from exc
+    except Exception as exc:
+        logger.error("[qa_router] GitHub Session 建立發生未預期例外：%s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="建立 Session 時發生內部錯誤，請稍後再試。") from exc
+
+    return SessionCreatedResponse(
+        session_id=session.session_id,
+        project_name=session.project_name,
+        file_count=len(session.project_files),
+        expires_at=session.expires_at.isoformat(),
+        has_map_reduce_summary=session.map_reduce_summary is not None,
+        message="GitHub Session 建立成功，可開始提問。",
     )
 
 
