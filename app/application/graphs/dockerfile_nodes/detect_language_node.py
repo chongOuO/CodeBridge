@@ -98,7 +98,7 @@ def _detect_database(content: str) -> tuple[bool, str | None]:
     return False, None
 
 
-async def detect_language_node(state: DockerfileGraphState, config: Any) -> dict[str, Any]:
+async def detect_language_node(state: DockerfileGraphState, config: Any = None) -> dict[str, Any]:
     """執行語言/框架/資料庫偵測的 LangGraph 節點（純函式，不呼叫 LLM）。
 
     從 ``markdown_content`` 中以 regex keyword 掃描各項特徵，

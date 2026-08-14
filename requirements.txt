@@ -1,14 +1,16 @@
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
-python-multipart==0.0.9
-pydantic==2.7.1
-pydantic-settings==2.2.1
-aiofiles==23.2.1
-#LangGraph AI
-langgraph>=0.2.0
-langchain-google-genai>=1.0.0
-langchain-openai>=1.1.12
-langchain-core>=0.2.0
-python-dotenv>=1.0.0
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+aiofiles
+
+# LangGraph AI
+langgraph
+langchain-google-genai
+langchain-openai
+langchain-core
+python-dotenv
+
 # HTTP Client（GitHub 下載用）
-httpx>=0.27.0
+httpx

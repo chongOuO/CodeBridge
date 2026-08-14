@@ -40,7 +40,7 @@ DOCKERIGNORE_PROMPT_TEMPLATE = """\
 """
 
 
-async def generate_dockerignore_node(state: DockerfileGraphState, config: Any) -> dict[str, Any]:
+async def generate_dockerignore_node(state: DockerfileGraphState, config: Any = None) -> dict[str, Any]:
     """執行 .dockerignore 生成的 LangGraph 節點。
 
     依據偵測到的語言與框架呼叫 LLM，將結果寫入 ``dockerignore_content``。

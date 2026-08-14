@@ -44,7 +44,7 @@ ER_PROMPT_TEMPLATE = """
 """
 
 
-async def generate_er_node(state: DiagramGraphState, config: Any) -> dict[str, Any]:
+async def generate_er_node(state: DiagramGraphState, config: Any = None) -> dict[str, Any]:
     """執行 ER 圖生成的 LangGraph 節點。
 
     將結果回寫至 ``er_diagram``。

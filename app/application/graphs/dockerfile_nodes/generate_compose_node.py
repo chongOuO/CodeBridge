@@ -54,7 +54,7 @@ COMPOSE_PROMPT_TEMPLATE = """\
 """
 
 
-async def generate_compose_node(state: DockerfileGraphState, config: Any) -> dict[str, Any]:
+async def generate_compose_node(state: DockerfileGraphState, config: Any = None) -> dict[str, Any]:
     """執行 docker-compose.yml 生成的 LangGraph 節點。
 
     依據 has_database 與 detected_db_type 組建 Prompt，

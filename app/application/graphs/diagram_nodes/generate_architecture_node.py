@@ -46,7 +46,7 @@ def _emergency_truncate(content: str, token_limit: int) -> str:
     return content[:target_chars] + "\n\n<!-- [Emergency Truncation] 內容已被緊急截斷以符合 TPM 限制 -->"
 
 
-async def generate_architecture_node(state: DiagramGraphState, config: Any) -> dict[str, Any]:
+async def generate_architecture_node(state: DiagramGraphState, config: Any = None) -> dict[str, Any]:
     """執行架構圖生成的 LangGraph 節點。
 
     將結果回寫至 ``architecture_diagram``。

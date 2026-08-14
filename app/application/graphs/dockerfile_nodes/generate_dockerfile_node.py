@@ -70,7 +70,7 @@ def _strip_code_fence(text: str) -> str:
     return text.strip()
 
 
-async def generate_dockerfile_node(state: DockerfileGraphState, config: Any) -> dict[str, Any]:
+async def generate_dockerfile_node(state: DockerfileGraphState, config: Any = None) -> dict[str, Any]:
     """執行 Dockerfile 生成的 LangGraph 節點。
 
     依據 detect_language_node 填入的語言/框架資訊與 needs_build_stage 旗標，

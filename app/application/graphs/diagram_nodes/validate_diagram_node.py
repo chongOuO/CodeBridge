@@ -310,7 +310,7 @@ def _preprocess_arch(diagram: str) -> str:
     diagram = re.sub(r"\n{3,}", "\n\n", diagram)
     return diagram.strip()
 
-async def validate_diagram_node(state: DiagramGraphState, config: Any) -> dict[str, Any]:
+async def validate_diagram_node(state: DiagramGraphState, config: Any = None) -> dict[str, Any]:
     """執行 Mermaid 語法修復與驗證的 LangGraph 節點。
 
     使用兩段式 Chain-of-Thought 策略讓 LLM 先條列錯誤、再輸出修正結果。
