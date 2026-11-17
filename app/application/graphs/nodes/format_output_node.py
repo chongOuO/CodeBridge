@@ -21,7 +21,7 @@ _writer = ReportWriter()
 
 
 async def format_output_node(state: GraphState) -> GraphState:
-    """組裝 AIReport 並將兩份文件分別寫入磁碟。
+    """依輸出設定組裝並寫出報告；output_dir 為 None 時保留內容且跳過寫檔。
 
     **邏輯重點**：此節點是管線的最後一道「效果閘門」(Effect Gate)，
     負責所有的寫入 I/O 副作用，前面的節點只做純粹的資料轉換。
@@ -36,6 +36,13 @@ async def format_output_node(state: GraphState) -> GraphState:
         更新後的 :class:`~app.application.graphs.state.GraphState`，
         新增了 ``api_docs_output_path`` 與 ``env_guide_output_path`` 兩個路徑欄位。
     """
+    if state.get("output_dir") is None:
+        logger.info("[format_output_node] 內容模式：跳過報告寫檔。")
+        return {
+            "api_docs_output_path": None,
+            "env_guide_output_path": None,
+        }
+
     logger.info("[format_output_node] 組裝 AIReport 並寫出兩份文件...")
 
     project_name = state["project_name"]

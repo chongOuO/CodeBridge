@@ -12,13 +12,14 @@ import logging
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.schemas.response import ErrorResponse, FullAnalysisContentResponse, FullAnalysisResponse
 from app.application.services.full_pipeline_service import FullPipelineService
 from app.application.services.project_analysis_service import ProjectAnalysisService
 from app.domain.exceptions import UnsupportedFileTypeError
+from app.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ async def analyze_project(
         "**差異在於回傳格式**：\n\n"
         "- `/analyze-and-generate`：將兩份文件寫入伺服器磁碟，回傳此 `路徑`。\n"
         "- `/analyze-and-generate/content`：**不依賴磁碟路徑**，直接回傳 AI 生成的 Markdown 文字內容。\n\n"
+        "本地預設同時寫出報告；設定 `CONTENT_REPORT_WRITE_FILES=false` 可停用此端點的報告寫檔。\n\n"
         "適用情境：前端需要直接渲染內容，或進行內容對接 / 二次處理，不需要對接伺服器檔案系統。\n\n"
         "**前置需求**：伺服器需設定 `GOOGLE_API_KEY` 環境變數。"
     ),
@@ -127,11 +129,13 @@ async def analyze_project(
 )
 async def analyze_and_generate_content(
     file: UploadFile = File(..., description="待分析的 ZIP 壓縮檔。"),
+    settings: Settings = Depends(get_settings),
 ) -> FullAnalysisContentResponse:
-    """執行完整 Phase 1 + Phase 2 整合管線，不寫入磁碟，直接回傳 AI 生成內容 JSON。
+    """執行完整管線並回傳內容 JSON，依設定決定是否額外寫出報告。
 
     Args:
         file: FastAPI 解析的 multipart 上傳 ZIP 檔案物件。
+        settings: 應用程式設定，控制此端點的報告寫檔行為。
 
     Returns:
         :class:`~app.api.schemas.response.FullAnalysisContentResponse`，
@@ -152,12 +156,15 @@ async def analyze_and_generate_content(
 
     zip_bytes: bytes = await file.read()
 
-    # output_dir 使用系統快取目錄；本端點的核心價值在於回傳 content 本身，
-    # 磁碟輸出為 FullPipelineService 的副產物，後續可視需求拆除。
+    # 本地保留既有輸出路徑；唯讀部署環境可關閉報告寫檔。
     report = await _full_service.analyze_and_generate(
         zip_bytes=zip_bytes,
         filename=filename,
-        output_dir=Path.home() / ".cache" / "project-handover" / "ai_docs",
+        output_dir=(
+            Path.home() / ".cache" / "project-handover" / "ai_docs"
+            if settings.content_report_write_files
+            else None
+        ),
     )
 
     return FullAnalysisContentResponse(

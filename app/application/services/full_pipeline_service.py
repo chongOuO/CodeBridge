@@ -55,14 +55,14 @@ class FullPipelineService:
         self,
         zip_bytes: bytes,
         filename: str,
-        output_dir: Path,
+        output_dir: Path | None = None,
     ) -> AIReport:
         """執行完整的 Phase 1 + Phase 2 整合管線。
 
         Args:
             zip_bytes: 上傳的 ZIP 檔案之原始位元組資料。
             filename: 上傳時的原始檔名（例如：``"my_project.zip"``）。
-            output_dir: AI 生成的兩份 Markdown 文件的輸出目錄，不存在則自動建立。
+            output_dir: AI 文件的輸出目錄；None 表示只回傳內容，不寫出報告。
 
         Returns:
             包含兩份文件輸出路徑的 :class:`~app.domain.entities.ai_report.AIReport` 實體。
@@ -96,7 +96,7 @@ class FullPipelineService:
             # 直傳 markdown_content，parse_markdown_node 將自動跳過磁碟讀取
             "markdown_content": markdown_content,
             "source_md_path": f"<in-memory:{filename}>",
-            "output_dir": str(output_dir.resolve()),
+            "output_dir": str(output_dir.resolve()) if output_dir is not None else None,
         }
 
         final_state = await self._graph.ainvoke(initial_state)

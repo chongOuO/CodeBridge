@@ -24,7 +24,7 @@ class GraphState(TypedDict, total=False):
     Attributes:
         project_name: 被分析的專案名稱（由 Service 層在觸發前填入）。
         source_md_path: 待讀取的 Markdown 來源文件絕對路徑字串。
-        output_dir: 輸出目錄的絕對路徑字串。
+        output_dir: 輸出目錄的絕對路徑字串；None 表示不寫出報告。
         markdown_content: ``parse_markdown_node`` 讀取後填入的 Markdown 全文。
         api_docs_content: ``generate_api_docs_node`` 生成的 API 文件 Markdown。
         env_guide_content: ``generate_env_guide_node`` 生成的環境指南 Markdown。
@@ -39,7 +39,7 @@ class GraphState(TypedDict, total=False):
 
     project_name: str
     source_md_path: str
-    output_dir: str
+    output_dir: Optional[str]
     markdown_content: str
     api_docs_content: str
     env_guide_content: str

@@ -39,7 +39,15 @@ cp .env.example .env
 * LLM API Keys (例如 `OPENAI_API_KEY`、`GOOGLE_API_KEY`)
 * 伺服器配置與環境切換參數
 
+部署到 Vercel 時，請在專案 Settings → Environment Variables 設定
+`CONTENT_REPORT_WRITE_FILES=false`，套用至 Production 與 Preview，並重新部署。
+此設定讓 `/api/v1/projects/analyze-and-generate/content` 只回傳生成內容，
+不再將報告寫入家目錄。本地不設定時預設為 `true`，保留既有寫檔行為。
+這只控制內容端點的報告輸出，不影響 ZIP 暫存處理，也不變更其他檔案輸出端點；
+其他端點仍需提供可寫入的輸出目錄。
+
 ### 3.2 虛擬環境與套件安裝
+
 建議使用 `venv` 建立獨立虛擬環境，並安裝必要依賴：
 
 ```bash
@@ -61,6 +69,12 @@ pip install -r requirements.txt
 
 ```bash
 uvicorn main:app --reload --port 8000
+```
+
+報告輸出模式的回歸測試（以固定內容替代 LLM 呼叫，不需要 API Key）：
+
+```bash
+python -m unittest discover -s tests -v
 ```
 
 伺服器啟動後，請前往 [http://localhost:8000/docs](http://localhost:8000/docs) 檢視 OpenAPI (Swagger UI) API 互動面板。
